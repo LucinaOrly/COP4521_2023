@@ -7,29 +7,35 @@ About this project:
 Assumptions:NA
 All work below was performed by John Valencia-Londono """
 
-num = input('Enter a positive numeric value greater than zero: ')
+num = int(input('Enter a positive numeric value greater than zero: '))
 if num <= 0:
     print("Invalid input (must be greater than zero).")
-    exit()
+    exit(1)
 
-dir = input('Enter a direction (R/L): ').upper
-if dir == 'R' or dir == 'L':
+direction = input('Enter a direction (R/L): ').upper().strip()
+multiplier = 0
+if direction == 'R':
+    multiplier = 1
 else:
-    print("Invalid input (must be 'R' or 'L'")
-    exit()
+    if direction == 'L':
+        multiplier = -1
+    else:
+        print("Invalid input (must be 'R' or 'L'")
+        exit(1)
 
-def caesar_shift(ch, n):
-    if not ch.isalpha()
-        return ch
-    res = ( ( ord(ch) - ord('A') ) + n ) % (90 - 65)
-    return chr( res + ord('A') )
-
-str = input('Enter a string: ').upper
-encod = [caesar_shift(X)]
 
 # shifts character ch by n (wrap ascii values between [65, 90])
+def caesar_shift(ch, n):
+    if not ch.isalpha():
+        return ch
+    res = ((ord(ch) - 65) + n) % (91 - 65)
+    return chr(res + 65)
 
 
+string = input('Enter a string: ').upper()
 
+result = ''
+for i in [c for c in string]:
+    result += (caesar_shift(i, num * multiplier))
 
-
+print(result)
