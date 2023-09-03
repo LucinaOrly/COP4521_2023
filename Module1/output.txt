@@ -1,0 +1,4 @@
+Enter a positive numeric value greater than zero: 1
+Enter a direction (R/L): L
+Enter a string: abcdefg-tuvwxyz
+ZABCDEF-STUVWXY
