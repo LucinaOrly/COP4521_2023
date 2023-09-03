@@ -2,7 +2,7 @@
 Name:John Valencia-Londono
 Date:8/31/2023
 Assignment:Module1:SecretMessage
-Due Date:01/13/2021
+Due Date:09/03/2023
 About this project:User inputs a message and a desired shift and direction.
 The result is an encoded message by caesar shift.
 Assumptions:number input is an integer
