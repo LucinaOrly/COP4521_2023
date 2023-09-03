@@ -3,8 +3,9 @@ Name:John Valencia-Londono
 Date:8/31/2023
 Assignment:Module1:SecretMessage
 Due Date:01/13/2021
-About this project:
-Assumptions:NA
+About this project:User inputs a message and a desired shift and direction.
+The result is an encoded message by caesar shift.
+Assumptions:number input is an integer
 All work below was performed by John Valencia-Londono """
 
 num = int(input('Enter a positive numeric value greater than zero: '))
