@@ -40,3 +40,10 @@ for i in [c for c in string]:
     result += (caesar_shift(i, num * multiplier))
 
 print(result)
+"""
+Sample Output:
+Enter a positive numeric value greater than zero: 1
+Enter a direction (R/L): L
+Enter a string: abcdefg-tuvwxyz
+ZABCDEF-STUVWXY
+"""
