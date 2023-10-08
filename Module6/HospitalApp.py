@@ -1,41 +1,17 @@
 """
 Name:John Valencia-Londono
-Date:10/01/2023
-Module 5: Role Based Access Control
-Assignment:Module 4: Basic Flask Website
-Due Date:10/01/2023
+Date:10/08/2023
+Assignment:Module 6: Encrypt Data in database
+Due Date:10/08/2023
 About this project:
-    Develop code that encrypts data stored in a database for a small scale using third-party Python libraries discussed in the course.
-    Solve a simple programming problem based on various approaches to computer security and information management.
-    Build a small scale real-world application that incorporates the principles of secure computing including cryptography, network security, and data protection.
-    Using Python and the flask.session, flask.flash, and os libraries ....
-
-    Starting from the website you created in Module 4: Basic Flask Website
-
-    The Log In page
-    Should have two input boxes and one link
-
-    textboxes - username and password
-    Button - Log In - (validates username and password. If valid opens - Home page, Otherwise notifies user "invalid username and/or password!" and stays on login page.)
-    Develop code that encrypts data stored in a database for a small scale using third-party Python libraries discussed in the course.
-    Solve a simple programming problem based on various approaches to computer security and information management.
-    Build a small scale real-world application that incorporates the principles of secure computing including cryptography, network security, and data protection.
-    Using Python and the flask.session, flask.flash, and os libraries ....
-
-    Starting from the website you created in Module 4: Basic Flask Website
-
-    The Log In page
-    Should have two input boxes and one link
-
-    textboxes - username and password
-    Button - Log In - (validates username and password. If valid opens - Home page, Otherwise notifies user "invalid username and/or password!" and stays on login page.)
-
 Assumptions: N/A
 All work below was performed by John Valencia-Londono """
+
 from sqlite3 import Connection
 from flask import Flask, render_template, request, flash, session
 import sqlite3 as sql
 import os
+from setup import enc, dec
 
 app = Flask(__name__)
 nm = ''
@@ -118,7 +94,7 @@ def addrec():
                 cur = con.cursor()
 
                 cur.execute("INSERT INTO hospital (name,age,phone,covid,security,password) VALUES (?,?,?,?,?,?)",
-                            (nm, ag, ph, co, sc, pw))
+                            (enc(nm), ag, enc(ph), co, sc, enc(pw)))
 
                 con.commit()
                 msgs.append("record successfully added")
@@ -156,7 +132,7 @@ def info():
 
         cur = con.cursor()
         print(nm)
-        cur.execute("""SELECT * FROM hospital WHERE name = ?""", (session["name"],))
+        cur.execute("""SELECT * FROM hospital WHERE name = ?""", (enc(session["name"]),))
         row = cur.fetchone()
         return render_template("info.html", row=row)
     else:
@@ -172,7 +148,7 @@ def login():
             con.row_factory = sql.Row
             cur = con.cursor()
 
-            cur.execute("""SELECT * FROM hospital WHERE name = ? AND password = ?""", (nm,pw))
+            cur.execute("""SELECT * FROM hospital WHERE name = ? AND password = ?""", (enc(nm),enc(pw)))
 
             row = cur.fetchone()
             if (row != None):
