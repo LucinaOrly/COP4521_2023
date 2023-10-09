@@ -4,14 +4,63 @@ Date:10/08/2023
 Assignment:Module 6: Encrypt Data in database
 Due Date:10/08/2023
 About this project:
-Assumptions: N/A
+    Using Python and the cryptography, Crypto.Cipher, Cryptodome.Cipher, Cryptodomex.Cipher, or any available encryption library ....
+
+    1) Database creation -
+
+        Encrypt data in the HospitalUser table
+
+        This submission requires the following to be submitted in a single Python script.
+
+        DDL for the table
+        DML for the table- where the following data fields are stored as encrypted data - UserName, UserPhNum, and LoginPassword.
+        Use Cursor results from a Select statement to display the information from all the rows in the table
+        DDL Script Requirements:
+        You must have a drop table command at the top of your script to drop the table in your database.
+        You must have a create table statement
+        Your table must contain the following attributes: UserId, UserName, UserAge, UserPhNum, UserHasCOVID, SecurityLevel, and LoginPassword
+        Your table create script must properly define UserId as the primary key.
+        Your script must run to completion without errors.
+        DML Script Requirements:
+        Your script must create at least 6 rows of data in the table created above with relevant data where the following data fields are stored as encrypted data - UserName, UserPhNum, and LoginPassword
+        Use Cursor results from a Select statement to display the information from all the rows in the table
+                Add new UserTestResults table
+
+        This submission requires the following to be submitted in a single Python script.
+
+        DDL for the table
+        DML for the table
+        Use Cursor results from a Select statement to display the information from all the rows in the table
+        DDL Script Requirements:
+        You must have a drop table command at the top of your script to drop the table in your database.
+        You must have a create table statement
+        Your table must contain the following attributes: TestResultId, UserId, TestName, and TestResult
+        NOTES:
+        UserId is an integer but not a primary key for this table (should match a UserId in your HospitalUser table)
+        TestResult is a string ( "positive",  "undetermined", "negative")
+        Your table create script must properly define TestResultId as the primary key.
+        Your script must run to completion without errors.
+        DML Script Requirements:
+        Your script must create at least 6 rows of data in the table created above with relevant data
+        Use Cursor results from a Select statement to display the information from all the rows in the table
+    2) Frond end App - Encrypt and Decrypt Data coming from database
+
+        Change the following logic to the following pages in your Flask website
+
+        Login - (data values for the following fields UserName, UserPhNum, and LoginPassword should be encrypted before they are used to the query the table. However, the UserName displayed on the login screen should be decrypted.).
+        Add a new Hospital App User (data values for the following fields UserName, UserPhNum, and LoginPassword should be encrypted before they are added to the table).
+        Show my Information  - (data values for the following fields UserName, UserPhNum, and LoginPassword should be decrypted after they are pulled from the database table).
+        List Users (data values for the following fields UserName, UserPhNum, and LoginPassword should be decrypted after they are pulled from the database table).
+        All other logic must remain the same and work per the directions in Module 4: Basic Flask Website and Module 5: Basic Login validation
+    3) You must include a list of decrypted Username, password, and SecurityLevel for all records in your database so that your mentor can test your application.
+Assumptions: pycryptodome package installed CORRECTLY (it did not for this machine)
 All work below was performed by John Valencia-Londono """
 
 from sqlite3 import Connection
 from flask import Flask, render_template, request, flash, session
 import sqlite3 as sql
 import os
-from setup import enc, dec
+from TestResult import enc, dec  # helper functions
 
 app = Flask(__name__)
 nm = ''
@@ -31,10 +80,10 @@ con.close()
 
 @app.route('/')
 def home():
-
     if not session.get('logged_in'):
         return render_template('login.html')
-    return render_template('home.html',name=session['name'])
+    return render_template('home.html', name=session['name'])
+
 
 @app.route('/enternew')
 def new_patient():
@@ -42,6 +91,7 @@ def new_patient():
         return render_template('input.html', allowed_action=True)
     else:
         return render_template("notfound.html")
+
 
 @app.route('/input', methods=['post', 'get'])
 def addrec():
@@ -117,12 +167,23 @@ def list():
         con.row_factory = sql.Row
 
         cur = con.cursor()
-        cur.execute("select * from hospital")
+        # goal: decode encrypted data for display, does not commit to database
+        cur.execute("select name, phone, password from hospital")
 
-        rows = cur.fetchall()
+        row = cur.fetchone()
+        while row:
+            enc_nm = row[0]
+            enc_ph = row[1]
+            enc_pw = row[2]
+            con.execute("UPDATE hospital SET name=?,phone=?,password=? WHERE name=?",
+                        (dec(enc_nm),dec(enc_ph),dec(enc_pw),enc_nm))
+            row = cur.fetchone()
+
+        rows = cur.execute("SELECT * FROM hospital")
         return render_template("list.html", rows=rows)
     else:
         return render_template("notfound.html")
+
 
 @app.route('/info')
 def info():
@@ -131,12 +192,22 @@ def info():
         con.row_factory = sql.Row
 
         cur = con.cursor()
-        print(nm)
         cur.execute("""SELECT * FROM hospital WHERE name = ?""", (enc(session["name"]),))
+
+        # decode encrypted data, do not commit
         row = cur.fetchone()
-        return render_template("info.html", row=row)
+        enc_nm = row[1]
+        enc_ph = row[3]
+        enc_pw = row[6]
+
+        cur.execute("UPDATE hospital SET name=?,phone=?,password=? WHERE UserID=?",
+                    (dec(enc_nm), dec(enc_ph), dec(enc_pw), row[0]))
+
+        row = cur.execute("SELECT * FROM hospital WHERE name = ?", (session["name"],))
+        return render_template("info.html", row=row.fetchone())
     else:
         return render_template("notfound.html")
+
 
 @app.route('/login', methods=['POST'])
 def login():
@@ -148,15 +219,15 @@ def login():
             con.row_factory = sql.Row
             cur = con.cursor()
 
-            cur.execute("""SELECT * FROM hospital WHERE name = ? AND password = ?""", (enc(nm),enc(pw)))
+            cur.execute("""SELECT * FROM hospital WHERE name = ? AND password = ?""", (enc(nm), enc(pw)))
 
             row = cur.fetchone()
             if (row != None):
                 session['name'] = nm
                 session['logged_in'] = True
-                if row[4] >= 2:
+                if row[5] >= 2:
                     session['staff'] = True
-                if row[4] == 3:
+                if row[5] == 3:
                     session['admin'] = True
             else:
                 session['logged_in'] = False
@@ -168,6 +239,7 @@ def login():
         con.close()
     return home()
 
+
 @app.route('/logout')
 def logout():
     session['name'] = ""
@@ -176,12 +248,14 @@ def logout():
     session['admin'] = False
     return home()
 
+
 if __name__ == '__main__':
     app.secret_key = os.urandom(12)
 
     app.run(debug=False)
 
-""" example output: Console View32G
+""" example output: Console View
+[(1, 1, 'user1', 'negative'), (2, 2, 'user2', 'positive'), (3, 3, 'user3', 'negative'), (4, 4, 'user4', 'negative'), (5, 0, 'admin', 'undermined'), (6, -1, 'test', 'undermined')]
  * Serving Flask app 'HospitalApp'
  * Debug mode: off
 WARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.
