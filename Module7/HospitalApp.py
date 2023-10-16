@@ -11,6 +11,7 @@ from sqlite3 import Connection
 from flask import Flask, render_template, request, flash, session
 import sqlite3 as sql
 import os
+import socket
 from TestResult import enc, dec  # helper functions
 
 app = Flask(__name__)
@@ -130,6 +131,34 @@ def listtests():
 
         cur.execute('SELECT * from UserTestResults WHERE UserId=?', (str(session.get('userid')),))
         return render_template("recordlist.html", row=cur.fetchone())
+    else:
+        return render_template("notfound.html")
+
+
+@app.route('/record', methods=['GET'])
+def recordtestform():
+    if session.get('logged_in') and session.get('staff'):
+        return render_template("testform.html", allowed_action = True)
+    else:
+        return render_template("notfound.html")
+@app.route('/record', methods=['POST'])
+def recordtest():
+    if session.get('logged_in') and session.get('staff'):
+        if request.method == 'POST':
+            try:
+                sock = socket.socket()
+
+                sock.sendall(bytes())
+                userid = request.form['userid']
+                testname = request.form['testname']
+                testresult = request.form['testresult']
+
+                sock.connect("localhost", 9999)
+                sock.close()
+            except sock.error as e:
+                msg = "Error connecting to sock"
+            finally:
+                return render_template("result.html", msgs=msg)
     else:
         return render_template("notfound.html")
 
