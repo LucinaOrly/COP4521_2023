@@ -1,5 +1,7 @@
 import	socketserver
-import Encryption
+import sqlite3 as sql
+from TestResult import dec
+from HospitalApp import strseparator
 
 class	MyTCPHandler(socketserver.BaseRequestHandler):
     def	handle(self):
@@ -7,11 +9,27 @@ class	MyTCPHandler(socketserver.BaseRequestHandler):
         self.data	=	self.request.recv(1024).strip()
         print("{}	sent message:	".format(self.client_address[0]))
         print(self.data)
-        self.data = str(Encryption.cipher.decrypt(self.data))
+        self.data = dec(self.data)
         print(self.data)
+
+        strs = str.split(self.data, strseparator)
+        con = sql.connect('HospitalDB.db')
+
+        print(strs)
+        cur = con.cursor()
+        cur.execute('SELECT COUNT(*) FROM UserTestResults')
+        num_of_rows = cur.fetchone()
+        print(num_of_rows[0])
+        cur.execute("INSERT INTO UserTestResults (testresultid, userid, testname, testresult) VALUES (?,?,?,?)",
+                    (num_of_rows[0] + 1,strs[0],strs[1],strs[2]))
+        con.commit()
+        con.close()
+
+
 
 if __name__  ==	"__main__":
     try:
+        print("running")
         HOST,	PORT	=	"localhost",	9999
         #	Create	the	server,	binding	to	localhost	on	port	9999
         server	=	socketserver.TCPServer((HOST,	PORT),	MyTCPHandler)

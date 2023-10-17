@@ -16,6 +16,7 @@ from TestResult import enc, dec  # helper functions
 
 app = Flask(__name__)
 nm = ''
+strseparator = "^%$"
 
 con = sql.connect('HospitalDB.db')
 con.execute('''CREATE TABLE IF NOT EXISTS hospital(
@@ -95,14 +96,15 @@ def addrec():
 
                 # write requests to database
                 cur = con.cursor()
-
-                cur.execute("INSERT INTO hospital (name,age,phone,covid,security,password) VALUES (?,?,?,?,?,?)",
-                            (enc(nm), ag, enc(ph), co, sc, enc(pw)))
+                cur.execute("SELECT COUNT(*) FROM hospital")
+                num_of_rows = cur.fetchone()
+                cur.execute("INSERT INTO hospital (userid,name,age,phone,covid,security,password) VALUES (?,?,?,?,?,?,?)",
+                            (num_of_rows[0], enc(nm), ag, enc(ph), co, sc, enc(pw)))
 
                 con.commit()
                 msgs.append("record successfully added")
-            except:
-                print("excepted")
+            except Exception as e:
+                print("excepted:", e)
                 con.rollback()
             finally:
                 print(msgs)
@@ -112,6 +114,7 @@ def addrec():
     else:
         return render_template("notfound.html")
 
+
 @app.route('/recordslist')
 def listtests():
     if session.get('logged_in'):
@@ -120,17 +123,18 @@ def listtests():
 
         cur = con.cursor()
         cur.execute('SELECT * from UserTestResults WHERE UserId=?', (str(session.get('userid')),))
-
-        row = cur.fetchone()
+        rows = cur.fetchall()
 
         # decode information for use in display list
-        enc_nm = row[2]
-        enc_res = row[3]
-        cur.execute('UPDATE UserTestResults SET TestName=?,TestResult=? WHERE UserId=?',(
-            enc_nm, enc_res, session.get('userid')))
+        for row in rows:
+            enc_id = row[0]
+            enc_nm = row[2]
+            enc_res = row[3]
+            cur.execute('UPDATE UserTestResults SET TestName=?,TestResult=? WHERE UserId=? AND TestResultID=?', (
+                dec(enc_nm), dec(enc_res), session.get('userid'), enc_id))
 
-        cur.execute('SELECT * from UserTestResults WHERE UserId=?', (str(session.get('userid')),))
-        return render_template("recordlist.html", row=cur.fetchone())
+        rows = cur.execute('SELECT * from UserTestResults WHERE UserId=?', (str(session.get('userid')),))
+        return render_template("recordlist.html", rows=rows)
     else:
         return render_template("notfound.html")
 
@@ -138,27 +142,56 @@ def listtests():
 @app.route('/record', methods=['GET'])
 def recordtestform():
     if session.get('logged_in') and session.get('staff'):
-        return render_template("testform.html", allowed_action = True)
+        return render_template("testform.html", allowed_action=True)
     else:
         return render_template("notfound.html")
+
+
 @app.route('/record', methods=['POST'])
 def recordtest():
     if session.get('logged_in') and session.get('staff'):
         if request.method == 'POST':
+            sock = socket.socket()
+            # sock.sendall(bytes())
+
+            msgs = []
+
             try:
-                sock = socket.socket()
-
-                sock.sendall(bytes())
+                # userid > 0
                 userid = request.form['userid']
-                testname = request.form['testname']
-                testresult = request.form['testresult']
+                if not str.isdigit(userid) or int(userid) < 0:
+                    msgs.append("UserID Must be a numerical value > 0.")
 
-                sock.connect("localhost", 9999)
+                # not empty
+                testname = request.form['testname']
+                if testname.strip == '':
+                    msgs.append("TestName cannot be empty.")
+
+                # not empty
+                testresult = request.form['testresult']
+                if testresult.strip == '':
+                    msgs.append("TestResult cannot be empty.")
+                    print(userid, testname, testresult)
+
+                print(len(msgs))
+                if len(msgs) > 0:
+                    print(msgs)
+                    raise Exception("Error messages present")
+
+                resultstr = userid + strseparator + testname + strseparator + testresult
+                sock.connect(("localhost", 9999))
+                sock.sendall(bytes(enc(resultstr), 'utf-8'))
                 sock.close()
+
+                msgs.append("Successfully sent results!")
             except sock.error as e:
-                msg = "Error connecting to sock"
+                msgs.append("Error connecting to sock:" + e)
+                print("did not connect")
+            except Exception as e:
+                print("excepted: " + e)
             finally:
-                return render_template("result.html", msgs=msg)
+                msg = '<br>'
+                return render_template("result.html", msg='<br>' + msg.join(msgs))
     else:
         return render_template("notfound.html")
 
@@ -179,7 +212,7 @@ def list():
             enc_ph = row[1]
             enc_pw = row[2]
             con.execute("UPDATE hospital SET name=?,phone=?,password=? WHERE name=?",
-                        (dec(enc_nm),dec(enc_ph),dec(enc_pw),enc_nm))
+                        (dec(enc_nm), dec(enc_ph), dec(enc_pw), enc_nm))
             row = cur.fetchone()
 
         rows = cur.execute("SELECT * FROM hospital")
@@ -226,8 +259,6 @@ def login():
 
             row = cur.fetchone()
 
-            session['userid'] = row[0]
-            print(session['userid'])
             if (row != None):
                 session['name'] = nm
                 session['logged_in'] = True
@@ -238,9 +269,9 @@ def login():
             else:
                 session['logged_in'] = False
                 flash('invalid username and/or password invalid!')
-    except:
+    except Exception as e:
         con.rollback()
-        flash("error in insert operation")
+        flash("error in insert operation:" + str(e))
     finally:
         con.close()
     return home()
@@ -254,7 +285,6 @@ def logout():
     session['admin'] = False
     session['userid'] = None
     return home()
-
 
 
 if __name__ == '__main__':

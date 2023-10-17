@@ -8,16 +8,19 @@
 {% if session['logged_in'] and session['staff'] %}
       <table border="1">
          <thead>
-            <tr><td>Name</td>
-            <td>Age</td>
-            <td>Phone Number</td>
+            <tr><td>UserID</td>
+                <td></td>Name</td>
+                <td>Age</td>
+                <td>Phone Number</td>
                 <td>HasCOVID</td>
                 <td>Security Role Level</td>
-            <td>Login Password</td>
-         </tr></thead>
+                b<td>Login Password</td>
+            </tr>
+         </thead>
           <tbody>
           {% for row in rows %}
           <tr>
+               <td>{{row["UserID"]}}</td>
                <td>{{row["Name"]}}</td>
                <td>{{row["Age"]}}</td>
                <td>{{row["Phone"]}}</td>

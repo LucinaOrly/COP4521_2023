@@ -5,12 +5,13 @@
 </head>
 <body data-gr-c-s-loaded="true" style="margin: 0px;">
 
-{% if session['logged_in'] and session['staff'] %}
+{% if session['logged_in'] %}
       <table border="1">
          <thead>
             <tr><td>TestName</td>
             <td>TestResult</td>
          </tr></thead>
+
           <tbody>
           {% for row in rows %}
           <tr>
