@@ -85,6 +85,7 @@ def addrec():
                 if not str.isdigit(sc) or int(sc) < 1 or int(sc) > 3:
                     msgs.append("The SecurityRoleLevel must be a numeric between 1 and 3.")
 
+
                 # remove trailing and leading whitespace from input
                 pw = request.form['password'].strip()
                 if pw == '':
