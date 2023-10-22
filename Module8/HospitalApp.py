@@ -143,6 +143,54 @@ def listtests():
     else:
         return render_template("notfound.html")
 
+@app.route('/recordhmac', methods=['GET'])
+def recordtestformhmac():
+    if session.get('logged_in'):
+        return render_template("testformhmac.html", allowed_action=True)
+    else:
+        return render_template("notfound.html")
+@app.route('/record', methods=['POST'])
+def recordtesthmac():
+    if session.get('logged_in'):
+        if request.method == 'POST':
+            sock = socket.socket()
+            # sock.sendall(bytes())
+
+            msgs = []
+
+            try:
+                # testresultid > 0
+                testresultid = request.form['testid']
+                if not str.isdigit(testresultid) or int(testresultid) < 0:
+                    msgs.append("TestResultId Must be a numerical value > 0.")
+
+                # not empty
+                testresult = request.form['testresult']
+                if testresult.strip == '':
+                    msgs.append("TestResult cannot be empty.")
+                    print(testresultid, testresult)
+
+                print(len(msgs))
+                if len(msgs) > 0:
+                    print(msgs)
+                    raise Exception("Error messages present")
+
+                resultstr = testresultid + strseparator + testresult
+                sock.connect(("localhost", 8888))
+                sock.sendall(bytes(enc(resultstr), 'utf-8'))
+                sock.close()
+
+                msgs.append("Successfully sent results!")
+            except sock.error as e:
+                msgs.append("Error connecting to sock:" + e)
+                print("did not connect")
+            except Exception as e:
+                print("excepted: " + e)
+            finally:
+                msg = '<br>'
+                return render_template("result.html", msg='<br>' + msg.join(msgs))
+    else:
+        return render_template("notfound.html")
 
 @app.route('/record', methods=['GET'])
 def recordtestform():
