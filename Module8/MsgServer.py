@@ -4,28 +4,6 @@ from TestResult import enc, dec
 from HospitalApp import strseparator
 
 
-class HMACAuth(socketserver.BaseRequestHandler):
-    def handle(self):
-        self.data = self.request.recv(1024).strip()
-        print("8888{}	sent message:	".format(self.client_address[0]))
-        self.data = dec(self.data)
-
-        # split recieved string into its pieces for computing
-        strs = str.split(self.data, strseparator)
-        con = sql.connect('HospitalDB.DB')
-
-        cur = con.cursor()
-        if cur.execute('SELECT * FROM UserTestResults WHERE testresultid=?',
-                    (strs[0],))!=False:
-            cur.execute('UPDATE UserTestResults SET TestResult=? WHERE testresultid=?',
-                    (strs[1], strs[0]))
-            print('Update recieved successfully!')
-        else:
-            print('Update recieved unsuccessfully (cannot find testresultid)')
-                 
-        con.commit()
-        con.close()
-
 class	MyTCPHandler(socketserver.BaseRequestHandler):
     def	handle(self):
         #	self.request	is	the	TCP	socket	connected	to	the	client
@@ -55,7 +33,6 @@ if __name__  ==	"__main__":
         print("running")
         #	Create	the	server,	binding	to	localhost	on	port	9999
         server	=	socketserver.TCPServer(("localhost",	9999),	MyTCPHandler)
-        server_HMAC = socketserver.TCPServer(("localhost", 8888), HMACAuth)
         # Activate	the	server;	this	will	keep	running	until	you
         #	interrupt	the	program	with	Ctrl-C
         server.serve_forever()

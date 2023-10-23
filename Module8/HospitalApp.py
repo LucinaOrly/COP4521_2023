@@ -160,7 +160,7 @@ def recordtesthmac():
 
             try:
                 # testresultid > 0
-                testresultid = request.form['testid']
+                testresultid = request.form['testresultid']
                 if not str.isdigit(testresultid) or int(testresultid) < 0:
                     msgs.append("TestResultId Must be a numerical value > 0.")
 
@@ -232,6 +232,7 @@ def recordtest():
                     raise Exception("Error messages present")
 
                 resultstr = userid + strseparator + testname + strseparator + testresult
+                print(resultstr)
                 sock.connect(("localhost", 9999))
                 sock.sendall(bytes(enc(resultstr), 'utf-8'))
                 sock.close()
