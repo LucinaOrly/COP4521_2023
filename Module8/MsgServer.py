@@ -15,9 +15,14 @@ class HMACAuth(socketserver.BaseRequestHandler):
         con = sql.connect('HospitalDB.DB')
 
         cur = con.cursor()
-        cur.execute('UPDATE UserTestResults SET TestResult=? WHERE testresultid=?',
+        if cur.execute('SELECT * FROM UserTestResults WHERE testresultid=?',
+                    (strs[0],))!=False:
+            cur.execute('UPDATE UserTestResults SET TestResult=? WHERE testresultid=?',
                     (strs[1], strs[0]))
-
+            print('Update recieved successfully!')
+        else:
+            print('Update recieved unsuccessfully (cannot find testresultid)')
+                 
         con.commit()
         con.close()
 
