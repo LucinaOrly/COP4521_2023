@@ -1,11 +1,11 @@
 """
 Name:John Valencia-Londono
-Date:10/20/2023
-Assignment:Module 7: Send Encrypted Message
-Due Date:10/15/2023
+Date:10/23/2023
+Assignment:Module 8: Send Authenticated Message
+Due Date:10/22/2023
 About this project:
-Use TCP to send encrypted data across servers to send records to the UserTestResults table
-Assumptions: pycryptodome package installed CORRECTLY, no duplicate records with the same username and password
+Send messages across servers and authenticate using HMAC
+Assumptions: run HMACServer, MsgServer, setup, and TestResult
 All work below was performed by John Valencia-Londono """
 
 from sqlite3 import Connection
@@ -13,11 +13,15 @@ from flask import Flask, render_template, request, flash, session
 import sqlite3 as sql
 import os
 import socket
+import logging
+import traceback
 from TestResult import enc, dec  # helper functions
+import hmac, hashlib
 
 app = Flask(__name__)
 nm = ''
 strseparator = "^%$"
+secret = b'1234'
 
 con = sql.connect('HospitalDB.db')
 con.execute('''CREATE TABLE IF NOT EXISTS hospital(
@@ -86,7 +90,6 @@ def addrec():
                 if not str.isdigit(sc) or int(sc) < 1 or int(sc) > 3:
                     msgs.append("The SecurityRoleLevel must be a numeric between 1 and 3.")
 
-
                 # remove trailing and leading whitespace from input
                 pw = request.form['password'].strip()
                 if pw == '':
@@ -100,8 +103,9 @@ def addrec():
                 cur = con.cursor()
                 cur.execute("SELECT COUNT(*) FROM hospital")
                 num_of_rows = cur.fetchone()
-                cur.execute("INSERT INTO hospital (userid,name,age,phone,covid,security,password) VALUES (?,?,?,?,?,?,?)",
-                            (num_of_rows[0], enc(nm), ag, enc(ph), co, sc, enc(pw)))
+                cur.execute(
+                    "INSERT INTO hospital (userid,name,age,phone,covid,security,password) VALUES (?,?,?,?,?,?,?)",
+                    (num_of_rows[0], enc(nm), ag, enc(ph), co, sc, enc(pw)))
 
                 con.commit()
                 msgs.append("record successfully added")
@@ -143,13 +147,16 @@ def listtests():
     else:
         return render_template("notfound.html")
 
+
 @app.route('/recordhmac', methods=['GET'])
 def recordtestformhmac():
     if session.get('logged_in'):
         return render_template("testformhmac.html", allowed_action=True)
     else:
         return render_template("notfound.html")
-@app.route('/record', methods=['POST'])
+
+
+@app.route('/recordhmac', methods=['POST'])
 def recordtesthmac():
     if session.get('logged_in'):
         if request.method == 'POST':
@@ -161,23 +168,27 @@ def recordtesthmac():
             try:
                 # testresultid > 0
                 testresultid = request.form['testresultid']
-                if not str.isdigit(testresultid) or int(testresultid) < 0:
+                if not str.isdigit(testresultid) or int(testresultid) <= 0:
                     msgs.append("TestResultId Must be a numerical value > 0.")
 
                 # not empty
-                testresult = request.form['testresult']
-                if testresult.strip == '':
+                testresult = request.form['testresult'].strip()
+                if testresult == '':
                     msgs.append("TestResult cannot be empty.")
                     print(testresultid, testresult)
 
-                print(len(msgs))
                 if len(msgs) > 0:
                     print(msgs)
                     raise Exception("Error messages present")
 
-                resultstr = testresultid + strseparator + testresult
+                resultstr = testresultid + strseparator + testresult + strseparator
+
+                # hmac
+                computedSig = hmac.new(secret, bytes(resultstr, 'utf-8'), digestmod=hashlib.sha3_512).digest()
+
                 sock.connect(("localhost", 8888))
-                sock.sendall(bytes(enc(resultstr), 'utf-8'))
+                sock.sendall(bytes(enc(resultstr+str(computedSig)), 'utf-8'))
+
                 sock.close()
 
                 msgs.append("Successfully sent results!")
@@ -185,12 +196,13 @@ def recordtesthmac():
                 msgs.append("Error connecting to sock:" + e)
                 print("did not connect")
             except Exception as e:
-                print("excepted: " + e)
+                logging.error(traceback.format_exc())
             finally:
                 msg = '<br>'
                 return render_template("result.html", msg='<br>' + msg.join(msgs))
     else:
         return render_template("notfound.html")
+
 
 @app.route('/record', methods=['GET'])
 def recordtestform():
@@ -212,21 +224,20 @@ def recordtest():
             try:
                 # userid > 0
                 userid = request.form['userid']
-                if not str.isdigit(userid) or int(userid) < 0:
+                if not str.isdigit(userid) or int(userid) <= 0:
                     msgs.append("UserID Must be a numerical value > 0.")
 
                 # not empty
-                testname = request.form['testname']
-                if testname.strip == '':
+                testname = request.form['testname'].strip()
+                if testname == '':
                     msgs.append("TestName cannot be empty.")
 
                 # not empty
-                testresult = request.form['testresult']
-                if testresult.strip == '':
+                testresult = request.form['testresult'].strip()
+                if testresult == '':
                     msgs.append("TestResult cannot be empty.")
                     print(userid, testname, testresult)
 
-                print(len(msgs))
                 if len(msgs) > 0:
                     print(msgs)
                     raise Exception("Error messages present")
@@ -238,9 +249,9 @@ def recordtest():
                 sock.close()
 
                 msgs.append("Successfully sent results!")
-            except sock.error as e:
-                msgs.append("Error connecting to sock:" + e)
-                print("did not connect")
+            # except sock.error as e:
+            #     msgs.append("Error connecting to sock:" + e)
+            #     print("did not connect")
             except Exception as e:
                 print("excepted: " + e)
             finally:
@@ -345,7 +356,7 @@ def logout():
 if __name__ == '__main__':
     app.secret_key = os.urandom(12)
 
-    app.run(debug=False)
+    app.run(debug=True)
 
 """ example output: Console View
  * Serving Flask app 'HospitalApp'
